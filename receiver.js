@@ -4,6 +4,11 @@
  * the results to a socket file that will be read by a collector.
  * The URL parameters should look like the following:
  * http://mysite.com?d=val0&d=val1
+ *
+ * --port option can also be given a path to a socket file. So this
+ * can be load balanced behind nginx or the like.
+ *
+ * --file can be given a port to broadcast data. Doesn't require socket file.
  */
 
 
@@ -11,12 +16,11 @@ var http = require( 'http' ),
 	url = require( 'url' ),
 	net = require( 'net' ),
 	cli = require( 'commander' ),
-	queue = {},
 	bobj = {},
 	ci, hdata, hi;
 
 cli.version( '0.1.0' )
-	.option( '-f, --file [file]', 'Location to write the socket file', String, 'sockets/receiver.sock' )
+	.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
 	.option( '-p, --port [port]', 'Port or path for http server to run on', 7331 )
 	.option( '-d, --debug', 'Enable debugging' )
 	.parse( process.argv );
@@ -36,7 +40,7 @@ function debugLog( msg ) {
 }
 
 
-// broadcast JSON as string through socket file
+// broadcast JSON as string through specified parameter
 net.createServer(function( socket ) {
 	if ( cli.debug ) {
 		debugLog( 'server connected' );
@@ -75,5 +79,5 @@ http.createServer(function( req, res ) {
 		if ( cli.debug ) {
 			debugLog( e );
 		}
-	};
+	}
 }).listen( cli.port );
