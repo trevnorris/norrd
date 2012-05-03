@@ -13,7 +13,8 @@
 		"url" : "http://www.opensource.org/licenses/mit-license.php"
 	}],
 	"dependencies" : {
-		"commander" : "0.6.x"
+		"commander" : "0.6.x",
+		"nano" : "2.1.x"
 	},
 	"repository" : {
 		"type" : "git",
