@@ -7,18 +7,13 @@ var http = require( 'http' ),
 	net = require( 'net' ),
 	fs = require( 'fs' ),
 	cli = require( 'commander' ),
-	// list of emmiters that will need to receive the data
-	eList = {},
-	// list of receiver socket connections
-	rList = {},
-	// path of socket files that are currently active
-	rPath = [],
-	// aggregated object that will be broadcast at interval
-	bobj = {},
-	// bobj is first stringified and stored before broadcast
-	stringified = '',
-	// don't read in new sockets when aggregating data
-	isAgg = false,
+	eList = {},        // list of emmiters that will need to receive the data
+	sList = {},        // list of receiver socket connections
+	sPath = [],        // path of socket files that are currently active
+	bobj = {},         // aggregated object that will be broadcast at interval
+	stringified = '',  // bobj is first stringified and stored before broadcast
+	isAgg = false,     // don't read in new sockets when aggregating data
+	rSock = /\.(sock|socket)$/,
 	aggCounter = 0,
 	gtime = 0,
 	ptime, ci, hdata, hi;
@@ -54,27 +49,27 @@ function emitter() {
 }
 
 
-// create connection to receive socket file and add to rList
+// create connection to receive socket file and add to sList
 function socketConnect( path ) {
 	// create a uid for the given socket queue
-	var uid = ( Math.random() * 1e17 ).toString( 36 );
+	var uid = Math.random().toString( 36 ).substr( 2 );
 	// create connection to socket file
-	rList[ uid ] = net.connect( path );
+	sList[ uid ] = net.connect( path );
 	// cleanup if socket dies for whatever reason
-	rList[ uid ].on( 'end', function() {
+	sList[ uid ].on( 'end', function() {
 		// remove socket connection from list
-		delete rList[ uid ];
+		delete sList[ uid ];
 		// shouldn't happen often, so not worried about memory hit
-		rPath.splice( rPath.indexOf( path ), 1 );
+		sPath.splice( sPath.indexOf( path ), 1 );
 	});
 	// aggregate data when it's received
-	rList[ uid ].on( 'data', function( data ) {
+	sList[ uid ].on( 'data', function( data ) {
 		isAgg = true;
 		if ( !data ) return;
 		var tdata = data.toString();
 		objExtend( JSON.parse( data.toString() ));
 		// check if all socket callbacks have fired
-		if ( ++aggCounter === rPath.length ) {
+		if ( ++aggCounter === sPath.length ) {
 			aggCounter = 0;
 			isAgg = false;
 			// emit data here
@@ -82,7 +77,7 @@ function socketConnect( path ) {
 		}
 	});
 	// add path to global path list
-	rPath.push( path );
+	sPath.push( path );
 }
 
 
@@ -96,7 +91,7 @@ function socketConnect( path ) {
 	// scan folder for new socket files
 	fs.readdir( cli.dir, function( e, files ) {
 		for ( var i = 0; i < files.length; i++ ) {
-			if ( rPath.indexOf( files[i] ) === -1 ) {
+			if ( sPath.indexOf( files[i] ) === -1 && rSock.test( files[i] )) {
 				// send path to receiver socket connector
 				socketConnect( cli.dir + '/' + files[i] );
 			}
@@ -107,32 +102,26 @@ function socketConnect( path ) {
 
 
 // aggregate data from receivers at interval then broadcast to all listeners
-//gtime = ptime = Date.now() - cli.time;
+gtime = ptime = Date.now() - cli.time;
 (function aggregate() {
 	// make sure aggregation is still not happening
 	if ( isAgg ) {
 		setTimeout( aggregate, 15 );
 		return;
 	}
-
 	// get current time
-	//ptime = Date.now();
-
-	// loop through rList and get data from all sockets
-	for ( var i in rList ) {
-		rList[i].write( '\n' );
+	ptime = Date.now();
+	// loop through sList and get data from all sockets
+	for ( var i in sList ) {
+		sList[i].write( '\n' );
 	}
-
-	// call aggregation at time interval
-	// TODO: fix the timer in setTimeout for more reliable intervals
-	setTimeout( aggregate, cli.time );
-	// adjust fire time for small extra lapse
-	//setTimeout( interval, cli.time + cli.time + gtime - ptime );
-	//gtime = ptime;
+	// call aggregation at time interval and adjust fire time for small extra lapse
+	setTimeout( aggregate, cli.time + cli.time + gtime - ptime );
+	gtime = ptime;
 }());
 
 
-// broadcast JSON as string through socket file
+// broadcast JSON as string through socket file or port
 net.createServer(function( socket ) {
 	// generate random key for message queue
 	var key = ( Math.random() * 1e17 ).toString( 17 );
