@@ -1,0 +1,22 @@
+{
+	"name" : "Norrd",
+	"version" : "0.1.0",
+	"description" : "Data Aggregator",
+	"homepage" : "http://github.com/trevnorris/norrd",
+	"author" : {
+		"name" : "Trevor Norris",
+		"email" : "trev.norris@gmail.com",
+		"url" : "http://trevorjnorris.com"
+	},
+	"licenses" : [{
+		"type" : "MIT",
+		"url" : "http://www.opensource.org/licenses/mit-license.php"
+	}],
+	"dependencies" : {
+		"commander" : "0.6.x"
+	},
+	"repository" : {
+		"type" : "git",
+		"url" : "http ://github.com/trevnoris/norrd.git"
+	}
+}
