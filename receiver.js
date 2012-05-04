@@ -3,7 +3,7 @@
  * This will aggregate those items by a set time interval then broadcast
  * the results to a socket file that will be read by a collector.
  * The URL parameters should look like the following:
- * http://mysite.com?d=val0&d=val1
+ * http://mysite.com?d=val1,val2,val3,val4
  *
  * --port option can also be given a path to a socket file. So this
  * can be load balanced behind nginx or the like.
@@ -64,16 +64,10 @@ http.createServer(function( req, res ) {
 	res.end();
 	// don't like using try/catch to grab parsing errors
 	try {
-		hdata = url.parse( req.url, true ).query.d;
-		// check if is String or an Array
-		if ( hdata instanceof Array ) {
-			for ( hi = 0; hi < hdata.length; hi++ ) {
-				if ( !bobj[hdata[hi]] ) bobj[hdata[hi]] = 0;
-				bobj[hdata[hi]]++;
-			}
-		} else {
-			if ( !bobj[hdata] ) bobj[hdata] = 0;
-			bobj[hdata]++;
+		hdata = url.parse( req.url, true ).query.d.split( ',' );
+		for ( hi = 0; hi < hdata.length; hi++ ) {
+			if ( !bobj[hdata[hi]] ) bobj[hdata[hi]] = 0;
+			bobj[hdata[hi]]++;
 		}
 	} catch( e ) {
 		if ( cli.debug ) {
