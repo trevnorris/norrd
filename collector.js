@@ -1,5 +1,8 @@
 /* Aggregate Collector
  * Connects to each socket file created by receiver.js and aggregates data sent out
+ *
+ * Broadcast data will always end with a null character (\u0000) so anything listening
+ * for data will know when it has reached the end of a transmission.
  */
 
 
@@ -43,7 +46,8 @@ function objExtend( data ) {
 // emit data to all listed connections
 function emitter() {
 	// store stringified data
-	stringified = JSON.stringify( bobj );
+	// append null (\u0000) so can determine end of JSON object
+	stringified = JSON.stringify( bobj ) + '\u0000';
 	// emit data
 	for ( var i in eList )
 		eList[i].write( stringified );
