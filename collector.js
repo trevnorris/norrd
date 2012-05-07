@@ -13,6 +13,7 @@ var http = require( 'http' ),
 	bobj = {},         // aggregated object that will be broadcast at interval
 	stringified = '',  // bobj is first stringified and stored before broadcast
 	isAgg = false,     // don't read in new sockets when aggregating data
+	tmpStore = {},     // each receiver has a uid where data is stores, in case of large JSON
 	rSock = /\.(sock|socket)$/,
 	aggCounter = 0,
 	gtime = 0,
@@ -57,26 +58,42 @@ function emitter() {
 function socketConnect( path ) {
 	// create a uid for the given socket queue
 	var uid = Math.random().toString( 36 ).substr( 2 );
+	// add uid entry to where JSON strings will be temporarily written
+	tmpStore[ uid ] = '';
 	// create connection to socket file
 	sList[ uid ] = net.connect( path );
 	// cleanup if socket dies for whatever reason
 	sList[ uid ].on( 'end', function() {
 		// remove socket connection from list
 		delete sList[ uid ];
+		delete tmpStore[ uid ];
 		// shouldn't happen often, so not worried about memory hit
 		sPath.splice( sPath.indexOf( path ), 1 );
 	});
 	// aggregate data when it's received
 	sList[ uid ].on( 'data', function( data ) {
 		isAgg = true;
+		// ensure there is actually data
 		if ( !data ) return;
 		var tdata = data.toString();
-		objExtend( JSON.parse( data.toString() ));
+		// temporarily store data if only part of the string has been sent
+		// check for entire JSON string by null char at end
+		if ( tdata.charCodeAt( tdata.length - 1 ) !== 0 ) {
+			tmpStore[ uid ] += tdata;
+			return;
+		} else {
+			// remove null character at the end of the JSON data
+			tmpStore[ uid ] += tdata.substr( 0, tdata.length - 1 );
+		}
+		// extend the bobj with the stored data
+		objExtend( JSON.parse( tmpStore[ uid ]));
+		// cleanup tmpStore
+		tmpStore[ uid ] = '';
 		// check if all socket callbacks have fired
 		if ( ++aggCounter === sPath.length ) {
 			aggCounter = 0;
 			isAgg = false;
-			// emit data here
+			// emit data if all socket callbacks have fired
 			emitter();
 		}
 	});

@@ -39,7 +39,8 @@ net.createServer(function( socket ) {
 		});
 	}
 	socket.on( 'data', function() {
-		socket.write( JSON.stringify( bobj ));
+		// send JSON and append null so can indentify end of feed
+		socket.write( JSON.stringify( bobj ) + '\u0000' );
 		// clear all items in broadcast object
 		for ( ci in bobj )
 			delete bobj[ci];
