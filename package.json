@@ -14,7 +14,8 @@
 	}],
 	"dependencies" : {
 		"commander" : "0.6.x",
-		"nano" : "2.1.x"
+		"nano" : "2.1.x",
+		"socket.io" : "0.9.x"
 	},
 	"repository" : {
 		"type" : "git",
