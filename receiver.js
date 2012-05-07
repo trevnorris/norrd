@@ -17,13 +17,14 @@ var http = require( 'http' ),
 	net = require( 'net' ),
 	cli = require( 'commander' ),
 	bobj = {},
-	ci, hdata, hi;
+	ci, hdata, htime, hi;
 
 require( './utils' );
 
 cli.version( '0.1.0' )
 	.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
 	.option( '-p, --port [port]', 'Port or path for http server to run on', 7331 )
+	.option( '-i, --intv [numb]', 'Time interval for data aggregation', 1000 )
 	.option( '-d, --debug', 'Enable debugging' )
 	.parse( process.argv );
 
@@ -53,10 +54,19 @@ http.createServer(function( req, res ) {
 	res.end();
 	// don't like using try/catch to grab parsing errors
 	try {
-		hdata = url.parse( req.url, true ).query.d.split( ',' );
+		hdata = url.parse( req.url, true ).query;
+		// get time from broadcast if exists
+		htime = hdata.t || Date.now();
+		//set htime for given time interval
+		htime -= htime % cli.intv;
+		// split aggregates into individual entries
+		hdata = hdata.d.split( ',' );
+		// ensure htime exists in bobj
+		if ( !bobj[ htime ] ) bobj[ htime ] = {};
+		// write each entry to interval's bobj entry
 		for ( hi = 0; hi < hdata.length; hi++ ) {
-			if ( !bobj[hdata[hi]] ) bobj[hdata[hi]] = 0;
-			bobj[hdata[hi]]++;
+			if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
+			bobj[ htime ][ hdata[ hi ]]++;
 		}
 	} catch( e ) {
 		if ( cli.debug ) {

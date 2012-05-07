@@ -26,11 +26,15 @@ cli.version( '0.1.0' )
 	.parse( process.argv );
 
 
-// extend the bobj object from another
+// extend the bobj object from a set of data
 function objExtend( data ) {
-	for ( var i in data ) {
-		if ( !bobj[i] ) bobj[i] = 0;
-		bobj[i] += data[i];
+	var i, j;
+	for ( i in data ) {
+		if ( !bobj[i] ) bobj[i] = {};
+		for ( j in data[i] ) {
+			if ( !bobj[i][j] ) bobj[i][j] = 0;
+			bobj[i][j] += data[i][j];
+		}
 	}
 }
 
