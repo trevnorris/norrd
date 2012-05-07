@@ -3,7 +3,8 @@ var app = require( 'http' ).createServer( handler ),
 	fs = require( 'fs' ),
 	cli = require( 'commander' ),
 	io = require( 'socket.io' ).listen( app ),
-	netClient;
+	partData = '',
+	netClient, tmp;
 
 io.set( 'log level', 1 );
 
@@ -27,13 +28,13 @@ function handler( req, res ) {
 }
 
 netClient.on( 'data', function( data ) {
-	io.sockets.emit( 'feed', data.toString() );
-});
-
-io.sockets.on( 'connection', function( socket ) {
-	//io.sockets.emit( 'feed', { will : 'be received by everyone' });
-
-	socket.on( 'disconnect', function() {
-		io.sockets.emit( 'user disconnected' );
-	});
+	tmp = data.toString();
+	if ( tmp.charCodeAt( tmp.length - 1 ) !== 0 ) {
+		partData += tmp;
+		return;
+	}
+	partData += tmp.substr( 0, tmp.length - 1 );
+	io.sockets.emit( 'feed', partData );
+	// cleanup
+	partData = '';
 });
