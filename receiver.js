@@ -19,6 +19,8 @@ var http = require( 'http' ),
 	bobj = {},
 	ci, hdata, hi;
 
+require( './utils' );
+
 cli.version( '0.1.0' )
 	.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
 	.option( '-p, --port [port]', 'Port or path for http server to run on', 7331 )
@@ -26,22 +28,9 @@ cli.version( '0.1.0' )
 	.parse( process.argv );
 
 
-// output stuff to debug log
-function debugLog( msg ) {
-	var time = new Date();
-	console.log( '[' +
-		( time.getMonth() + 1 ) +
-		'/' + time.getDate() +
-		'/' + time.getFullYear() +
-		'-' + time.getHours() +
-		':' + time.getMinutes() +
-		':' + time.getSeconds() +
-	']', msg );
-}
-
-
 // broadcast JSON as string through specified parameter
 net.createServer(function( socket ) {
+	socket.setNoDelay( true );
 	if ( cli.debug ) {
 		debugLog( 'server connected' );
 		socket.on( 'end', function() {
@@ -71,7 +60,7 @@ http.createServer(function( req, res ) {
 		}
 	} catch( e ) {
 		if ( cli.debug ) {
-			debugLog( e );
+			debugLog( 'hdata Parse Error: ' + e );
 		}
 	}
 }).listen( cli.port );
