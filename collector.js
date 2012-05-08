@@ -24,6 +24,7 @@ var http = require( 'http' ),
 
 cli.version( '0.1.0' )
 	.option( '-f, --dir [dir]', 'Directory containing the receiver.js socket files', String, './sockets' )
+	.option( '-m, --multi', 'Set if this is a collector of collections' )
 	.option( '-p, --port [port]', 'Port or path to broadcast aggregated data', 7331 )
 	.option( '-s, --scan [numb]', 'Time to rescan socket dir for new socket files', Number, 30000 )
 	.option( '-t, --time [numb]', 'Time interval (in milliseconds) between data broadcasts', Number, 1000 )
@@ -128,7 +129,8 @@ function socketConnect( path ) {
 
 // aggregate data from receivers at interval then broadcast to all listeners
 gtime = ptime = Date.now() - cli.time;
-(function aggregate() {
+// if collector of collectors, then no need to broadcast
+if ( !cli.multi ) (function aggregate() {
 	// make sure aggregation is still not happening
 	if ( isAgg ) {
 		setTimeout( aggregate, 15 );
