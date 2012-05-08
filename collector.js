@@ -116,7 +116,7 @@ function socketConnect( path ) {
 	// scan folder for new socket files
 	fs.readdir( cli.dir, function( e, files ) {
 		for ( var i = 0; i < files.length; i++ ) {
-			if ( sPath.indexOf( files[i] ) === -1 && rSock.test( files[i] )) {
+			if ( sPath.indexOf( cli.dir + '/' + files[i] ) === -1 && rSock.test( files[i] )) {
 				// send path to receiver socket connector
 				socketConnect( cli.dir + '/' + files[i] );
 			}
