@@ -14,6 +14,7 @@
 	}],
 	"dependencies" : {
 		"commander" : "0.6.x",
+		"hiredis" : "0.1.x",
 		"redis" : "0.7.x",
 		"socket.io" : "0.9.x"
 	},
