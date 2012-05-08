@@ -14,7 +14,7 @@
 	}],
 	"dependencies" : {
 		"commander" : "0.6.x",
-		"nano" : "2.1.x",
+		"redis" : "0.7.x",
 		"socket.io" : "0.9.x"
 	},
 	"repository" : {
