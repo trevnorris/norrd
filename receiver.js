@@ -31,7 +31,6 @@ cli.version( '0.1.0' )
 
 // broadcast JSON as string through specified parameter
 net.createServer(function( socket ) {
-	socket.setNoDelay( true );
 	if ( cli.debug ) {
 		debugLog( 'server connected' );
 		socket.on( 'end', function() {
@@ -40,7 +39,7 @@ net.createServer(function( socket ) {
 	}
 	socket.on( 'data', function() {
 		// send JSON and append null so can indentify end of feed
-		socket.write( JSON.stringify( bobj ) + '\u0000' );
+		socket.write( JSON.stringify( bobj ) + '\n' );
 		// clear all items in broadcast object
 		for ( ci in bobj )
 			delete bobj[ci];

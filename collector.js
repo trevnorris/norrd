@@ -20,7 +20,7 @@ var http = require( 'http' ),
 	rSock = /\.(sock|socket)$/,
 	aggCounter = 0,
 	gtime = 0,
-	ptime, ci, hdata, hi;
+	ptime;
 
 cli.version( '0.1.0' )
 	.option( '-f, --dir [dir]', 'Directory containing the receiver.js socket files', String, './sockets' )
@@ -83,7 +83,7 @@ function socketConnect( path ) {
 		var tdata = data.toString();
 		// temporarily store data if only part of the string has been sent
 		// check for entire JSON string by null char at end
-		if ( tdata.charCodeAt( tdata.length - 1 ) !== 0 ) {
+		if ( tdata.charCodeAt( tdata.length - 1 ) !== 10 ) {
 			tmpStore[ uid ] += tdata;
 			return;
 		} else {
