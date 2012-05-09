@@ -46,8 +46,8 @@ function objExtend( data ) {
 // emit data to all listed connections
 function emitter() {
 	// store stringified data
-	// append null (\u0000) so can determine end of JSON object
-	stringified = JSON.stringify( bobj ) + '\u0000';
+	// append new line character so can determine end of JSON object
+	stringified = JSON.stringify( bobj ) + '\n';
 	// emit data
 	for ( var i in eList )
 		eList[i].write( stringified );
