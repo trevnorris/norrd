@@ -1,0 +1,28 @@
+To get around the open file limit, do the following (for Ubuntu):
+
+sudo vim /etc/sysctl.conf
+
+Add the following line:
+fs.file-max = 65000
+
+sudo vim /etc/security/limits.conf
+
+Add the following lines:
+www-data       soft    nofile   9000
+www-data       hard    nofile   65000
+
+(restart for the above to take affect)
+
+sudo vim /etc/pam.d/common-session
+
+Add the following line:
+session required pam_limits.so
+
+sudo sysctl -p
+
+sudo vim /etc/nginx/nginx.conf
+
+Add the following line:
+worker_rlimit_nofile 9000;
+
+sudo service nginx restart
