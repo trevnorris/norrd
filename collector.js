@@ -17,17 +17,30 @@ var http = require( 'http' ),
 	stringified = '',  // bobj is first stringified and stored before broadcast
 	isAgg = false,     // don't read in new sockets when aggregating data
 	tmpStore = {},     // each receiver has a uid where data is stores, in case of large JSON
-	rSock = /\.(sock|socket)$/,
 	aggCounter = 0,
-	gtime = 0,
-	ptime;
+	config;            // default configuration imported from config.json
 
-cli.option( '-f, --dir [dir]', 'Directory containing the receiver.js socket files', String, './sockets' )
-	.option( '-m, --multi', 'Set if this is a collector of collections' )
-	.option( '-p, --port [port]', 'Port or path to broadcast aggregated data', 7331 )
-	.option( '-s, --scan [numb]', 'Time to rescan socket dir for new socket files', Number, 30000 )
-	.option( '-t, --time [numb]', 'Time interval (in milliseconds) between data broadcasts', Number, 1000 )
+require( './utils' );
+
+cli.option( '-c, --config [loc]', 'Location of config.json', String, './config.json' )
+	.option( '-d, --debug', 'Enable debugging' )
+	.option( '-m, --multi', 'Set if this is a collection of collectors' )
+	.option( '-p, --port [port]', 'Port or path to broadcast aggregated data' )
+	.option( '-r, --rescan [numb]', 'If connection to receiver fails, time interval to attempt reconnect', Number )
+	//.option( '-s, --scan [numb]', 'time interval to rescan the config.json for changes', Number )
+	.option( '-t, --time [numb]', 'Time interval (in milliseconds) between data broadcasts', Number )
 	.parse( process.argv );
+
+
+// open and parse the config file
+config = JSON.parse( fs.readFileSync( cli.config, 'utf8' )).collector;
+
+// command line parameters will override config.json
+if ( cli.multi ) config.multi = cli.multi;
+if ( cli.port ) config.port = cli.port;
+if ( cli.rescan ) config.rescan = cli.rescan;
+//if ( cli.scan ) config.scan = cli.scan;
+if ( cli.time ) config.time = cli.time;
 
 
 // extend the bobj object from a set of data
@@ -58,72 +71,77 @@ function emitter() {
 }
 
 
+// loop through and attempt connection to all listed receivers
+for ( var i in config.receivers ) {
+	receiverConnect( config.receivers[i] );
+}
+
+
 // create connection to receive socket file and add to sList
-function socketConnect( path ) {
-	// create a uid for the given socket queue
+function receiverConnect( rec ) {
+	// create a uid
 	var uid = Math.random().toString( 36 ).substr( 2 );
 	// add uid entry to where JSON strings will be temporarily written
 	tmpStore[ uid ] = '';
 	// create connection to socket file
-	sList[ uid ] = net.connect( path );
-	// cleanup if socket dies for whatever reason
-	sList[ uid ].on( 'end', function() {
-		// remove socket connection from list
-		delete sList[ uid ];
-		delete tmpStore[ uid ];
-		// shouldn't happen often, so not worried about memory hit
-		sPath.splice( sPath.indexOf( path ), 1 );
-	});
-	// aggregate data when it's received
-	sList[ uid ].on( 'data', function( data ) {
-		isAgg = true;
-		// ensure there is actually data
-		if ( !data ) return;
-		var tdata = data.toString();
-		// temporarily store data if only part of the string has been sent
-		// check for entire JSON string by null char at end
-		if ( tdata.charCodeAt( tdata.length - 1 ) !== 10 ) {
-			tmpStore[ uid ] += tdata;
-			return;
-		} else {
-			// remove null character at the end of the JSON data
-			tmpStore[ uid ] += tdata.substr( 0, tdata.length - 1 );
-		}
-		// extend the bobj with the stored data
-		objExtend( JSON.parse( tmpStore[ uid ]));
-		// cleanup tmpStore
-		tmpStore[ uid ] = '';
-		// check if all socket callbacks have fired
-		if ( ++aggCounter === sPath.length ) {
-			aggCounter = 0;
-			isAgg = false;
-			// emit data if all socket callbacks have fired
-			emitter();
-		}
-	});
-	// add path to global path list
-	sPath.push( path );
-}
-
-
-// execute immediately on startup, then rerun based on user parameters
-(function folderCheck() {
-	// if currently aggregating data, don't check for new socket files
-	if ( isAgg ) {
-		setTimeout( folderCheck, 15 );
-		return;
+	if ( rec.host ) {
+		sList[ uid ] = net.connect( rec.port, rec.host );
+	} else {
+		sList[ uid ] = net.connect( rec.sock );
 	}
-	// scan folder for new socket files
-	fs.readdir( cli.dir, function( e, files ) {
-		for ( var i = 0; i < files.length; i++ ) {
-			if ( sPath.indexOf( cli.dir + '/' + files[i] ) === -1 && rSock.test( files[i] )) {
-				// send path to receiver socket connector
-				socketConnect( cli.dir + '/' + files[i] );
+	sList[ uid ].on( 'connect', function() {
+		// cleanup if dies for whatever reason
+		sList[ uid ].on( 'end', function() {
+			// remove connection from list
+			delete sList[ uid ];
+			delete tmpStore[ uid ];
+			// shouldn't happen often, so not worried about memory hit
+			sPath.splice( sPath.indexOf( uid ), 1 );
+			// attempt reconnect at rescan interval
+			setTimeout(function() {
+				receiverConnect( rec );
+			}, config.rescan );
+		});
+		// aggregate data when it's received
+		sList[ uid ].on( 'data', function( data ) {
+			isAgg = true;
+			// ensure there is actually data
+			if ( !data ) return;
+			var tdata = data.toString();
+			// temporarily store data if only part of the string has been sent
+			// check for entire JSON string by null char at end
+			if ( tdata.charCodeAt( tdata.length - 1 ) !== 10 ) {
+				tmpStore[ uid ] += tdata;
+				return;
+			} else {
+				// remove null character at the end of the JSON data
+				tmpStore[ uid ] += tdata.substr( 0, tdata.length - 1 );
 			}
-		}
+			// extend the bobj with the stored data
+			objExtend( JSON.parse( tmpStore[ uid ]));
+			// cleanup tmpStore
+			tmpStore[ uid ] = '';
+			// check if all socket callbacks have fired
+			if ( ++aggCounter === sPath.length ) {
+				aggCounter = 0;
+				isAgg = false;
+				// emit data if all socket callbacks have fired
+				emitter();
+			}
+		});
+		// add path to global path list
+		sPath.push( uid );
 	});
-	setTimeout( folderCheck, cli.scan );
-}());
+	sList[ uid ].on( 'error', function( err ) {
+		if ( cli.debug ) debugLog( err );
+		// cleanup
+		delete sList[ uid ];
+		// attempt reconnect at rescan interval
+		setTimeout(function() {
+			receiverConnect( rec );
+		}, config.rescan );
+	});
+}
 
 
 // aggregate data from receivers at interval then broadcast to all listeners
@@ -153,4 +171,4 @@ net.createServer(function( socket ) {
 	socket.on( 'end', function() {
 		delete eList[ key ];
 	});
-}).listen( cli.port );
+}).listen( config.port );
