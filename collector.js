@@ -127,23 +127,19 @@ function socketConnect( path ) {
 
 
 // aggregate data from receivers at interval then broadcast to all listeners
-gtime = ptime = Date.now() - cli.time;
 // if collector of collectors, then no need to broadcast
-if ( !cli.multi ) (function aggregate() {
+if ( !config.multi ) (function aggregate() {
 	// make sure aggregation is still not happening
 	if ( isAgg ) {
 		setTimeout( aggregate, 15 );
 		return;
 	}
-	// get current time
-	ptime = Date.now();
 	// loop through sList and get data from all sockets
 	for ( var i in sList ) {
 		sList[i].write( '\n' );
 	}
-	// call aggregation at time interval and adjust fire time for small extra lapse
-	setTimeout( aggregate, cli.time + cli.time + gtime - ptime );
-	gtime = ptime;
+	// call aggregation at time interval
+	setTimeout( aggregate, config.time );
 }());
 
 
