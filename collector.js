@@ -1,7 +1,7 @@
 /* Aggregate Collector
  * Connects to each socket file created by receiver.js and aggregates data sent out
  *
- * Broadcast data will always end with a null character (\u0000) so anything listening
+ * Broadcast data will always end with a new line character, so anything listening
  * for data will know when it has reached the end of a transmission.
  */
 
@@ -22,8 +22,7 @@ var http = require( 'http' ),
 	gtime = 0,
 	ptime;
 
-cli.version( '0.1.0' )
-	.option( '-f, --dir [dir]', 'Directory containing the receiver.js socket files', String, './sockets' )
+cli.option( '-f, --dir [dir]', 'Directory containing the receiver.js socket files', String, './sockets' )
 	.option( '-m, --multi', 'Set if this is a collector of collections' )
 	.option( '-p, --port [port]', 'Port or path to broadcast aggregated data', 7331 )
 	.option( '-s, --scan [numb]', 'Time to rescan socket dir for new socket files', Number, 30000 )

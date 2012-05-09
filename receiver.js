@@ -21,8 +21,7 @@ var http = require( 'http' ),
 
 require( './utils' );
 
-cli.version( '0.1.0' )
-	.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
+cli.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
 	.option( '-p, --port [port]', 'Port or path for http server to run on', 7331 )
 	.option( '-i, --intv [numb]', 'Time interval for data aggregation', 1000 )
 	.option( '-d, --debug', 'Enable debugging' )
@@ -44,7 +43,6 @@ net.createServer(function( socket ) {
 		for ( ci in bobj )
 			delete bobj[ci];
 	});
-	//socket.pipe( socket );
 }).listen( cli.file );
 
 
