@@ -12,9 +12,19 @@ cli.option( '-s, --sock [socket]', 'Location of socket file where collector is b
 	.option( '-d, --debug', 'Enable debugging' )
 	.parse( process.argv );
 
+
 function sendData() {
+	// loop through timestamps in bobj
+	for ( var i in bobj ) {
+		// now loop though entries in each timestamp
+		for ( var j in bobj[i] ) {
+			client.hincrby( i, j, bobj[i][j] );
+		}
+	}
 }
 
+
+// connect to redis instance
 client = redis.createClient( cli.port, cli.host );
 client.on( 'error', function( err ) {
 	if ( cli.debug ) {
@@ -23,10 +33,11 @@ client.on( 'error', function( err ) {
 });
 
 
+// connect to collector
 conn = net.connect( cli.sock );
 conn.on( 'data', function( data ) {
 	data = data.toString();
-	if ( data.charCodeAt( data.length - 1 ) !== 0 ) {
+	if ( data.charCodeAt( data.length - 1 ) !== 10 ) {
 		tmpDoc += data;
 		return;
 	} else {
