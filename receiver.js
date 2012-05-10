@@ -53,22 +53,23 @@ http.createServer(function( req, res ) {
 	// don't like using try/catch to grab parsing errors
 	try {
 		hdata = url.parse( req.url, true ).query;
-		// get time from broadcast if exists
-		htime = hdata.t || Date.now();
-		//set htime for given time interval
-		htime -= htime % cli.intv;
-		// split aggregates into individual entries
-		hdata = hdata.d.split( ',' );
-		// ensure htime exists in bobj
-		if ( !bobj[ htime ] ) bobj[ htime ] = {};
-		// write each entry to interval's bobj entry
-		for ( hi = 0; hi < hdata.length; hi++ ) {
-			if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
-			bobj[ htime ][ hdata[ hi ]]++;
-		}
 	} catch( e ) {
 		if ( cli.debug ) {
 			debugLog( 'hdata Parse Error: ' + e );
 		}
+		return;
+	}
+	// get time from broadcast if exists
+	htime = hdata.t || Date.now();
+	//set htime for given time interval
+	htime -= htime % cli.intv;
+	// split aggregates into individual entries
+	hdata = hdata.d.split( ',' );
+	// ensure htime exists in bobj
+	if ( !bobj[ htime ] ) bobj[ htime ] = {};
+	// write each entry to interval's bobj entry
+	for ( hi = 0; hi < hdata.length; hi++ ) {
+		if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
+		bobj[ htime ][ hdata[ hi ]]++;
 	}
 }).listen( cli.port );
