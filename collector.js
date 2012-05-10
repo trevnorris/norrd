@@ -36,6 +36,7 @@ cli.option( '-c, --config [loc]', 'Location of config.json', String, './config.j
 config = JSON.parse( fs.readFileSync( cli.config, 'utf8' )).collector;
 
 // command line parameters will override config.json
+if ( cli.debug ) config.debug = cli.debug;
 if ( cli.multi ) config.multi = cli.multi;
 if ( cli.port ) config.port = cli.port;
 if ( cli.rescan ) config.rescan = cli.rescan;
@@ -61,7 +62,7 @@ function emitter() {
 	// store stringified data
 	// append new line character so can determine end of JSON object
 	stringified = JSON.stringify( bobj ) + '\n';
-	// emit data
+	// emit data on every socket connection in eList
 	for ( var i in eList )
 		eList[i].write( stringified );
 	// cleanup
@@ -79,19 +80,23 @@ for ( var i in config.receivers ) {
 
 // create connection to receive socket file and add to sList
 function receiverConnect( rec ) {
-	// create a uid
-	var uid = Math.random().toString( 36 ).substr( 2 );
-	// add uid entry to where JSON strings will be temporarily written
-	tmpStore[ uid ] = '';
+	var conn;
 	// create connection to socket file
-	if ( rec.host ) {
-		sList[ uid ] = net.connect( rec.port, rec.host );
+	if ( rec.port ) {
+		conn = net.connect( rec.port, rec.host );
 	} else {
-		sList[ uid ] = net.connect( rec.sock );
+		conn = net.connect( rec.sock );
 	}
-	sList[ uid ].on( 'connect', function() {
+	// setup listeners if the connection succeeds
+	conn.on( 'connect', function() {
+		// create a uid
+		var uid = Math.random().toString( 36 ).substr( 2 );
+		// add connection to socket list
+		sList[ uid ] = conn;
+		// add uid entry to where JSON strings will be temporarily written
+		tmpStore[ uid ] = '';
 		// cleanup if dies for whatever reason
-		sList[ uid ].on( 'end', function() {
+		conn.on( 'end', function() {
 			// remove connection from list
 			delete sList[ uid ];
 			delete tmpStore[ uid ];
@@ -103,7 +108,7 @@ function receiverConnect( rec ) {
 			}, config.rescan );
 		});
 		// aggregate data when it's received
-		sList[ uid ].on( 'data', function( data ) {
+		conn.on( 'data', function( data ) {
 			isAgg = true;
 			// ensure there is actually data
 			if ( !data ) return;
@@ -131,11 +136,13 @@ function receiverConnect( rec ) {
 		});
 		// add path to global path list
 		sPath.push( uid );
+		// send debug message that connection was successful
+		if ( config.debug )
+			debugLog( 'connected to service ' + ( rec.sock || rec.port + ':' + rec.host ));
 	});
-	sList[ uid ].on( 'error', function( err ) {
+	// if the connection fails, retry after rescan time
+	conn.on( 'error', function( err ) {
 		if ( cli.debug ) debugLog( err );
-		// cleanup
-		delete sList[ uid ];
 		// attempt reconnect at rescan interval
 		setTimeout(function() {
 			receiverConnect( rec );
@@ -164,7 +171,7 @@ if ( !config.multi ) (function aggregate() {
 // broadcast JSON as string through socket file or port
 net.createServer(function( socket ) {
 	// generate random key for message queue
-	var key = ( Math.random() * 1e17 ).toString( 17 );
+	var key = Math.random().toString( 36 ).substr( 2 );
 	// add function to message queue to be fired when data needs to be sent
 	eList[ key ] = socket;
 	// remove function from queue if connection closes
