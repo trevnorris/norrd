@@ -6,10 +6,11 @@ var net = require( 'net' ),
 
 require( '../utils' );
 
-cli.option( '-s, --sock [socket]', 'Location of socket file where collector is broadcasting', '/tmp/norrd-collector.sock' )
-	.option( '-p, --port [port]', 'Port number of redis instance', 6379 )
+cli.option( '-d, --debug', 'Enable debugging' )
+	.option( '-e, --expire', 'Hash expire time in sec. Set to zero for indefinite.', Number, 21600 )
 	.option( '-h, --host [host]', 'Host of redis instance', 'localhost' )
-	.option( '-d, --debug', 'Enable debugging' )
+	.option( '-p, --port [port]', 'Port number of redis instance', 6379 )
+	.option( '-s, --sock [socket]', 'Location of socket file where collector is broadcasting', '/tmp/norrd-collector.sock' )
 	.parse( process.argv );
 
 
@@ -19,6 +20,9 @@ function sendData() {
 		// now loop though entries in each timestamp
 		for ( var j in bobj[i] ) {
 			client.hincrby( i, j, bobj[i][j] );
+			if ( cli.expire > 0 ) {
+				client.expire( i, cli.expire );
+			}
 		}
 	}
 }
