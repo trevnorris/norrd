@@ -17,7 +17,10 @@ var http = require( 'http' ),
 	net = require( 'net' ),
 	cli = require( 'commander' ),
 	bobj = {},
-	ci, hdata, htime, hi;
+	tmpobj = {},
+	current = 0,
+	writtenTo = false,
+	tmptime, ci, hdata, htime, hi;
 
 require( './utils' );
 
@@ -37,6 +40,16 @@ net.createServer(function( socket ) {
 		});
 	}
 	socket.on( 'data', function() {
+		tmptime = Date.now();
+		// check if need to transfer data from tmpobj to bobj
+		if ( current + cli.intv < tmptime ) {
+			if ( writtenTo ) {
+				bobj[ current ] = tmpobj;
+				tmpobj = {};
+				writtenTo = false;
+			}
+			current = tmptime - ( tmptime % cli.intv );
+		}
 		// send JSON and append null so can indentify end of feed
 		socket.write( JSON.stringify( bobj ) + '\n' );
 		// clear all items in broadcast object
@@ -50,26 +63,50 @@ net.createServer(function( socket ) {
 http.createServer(function( req, res ) {
 	res.writeHead( 202, { 'Connection' : 'close' });
 	res.end();
+	tmptime = Date.now();
+	// check if current interval should be incremented
+	if ( current + cli.intv < tmptime ) {
+		// yes, so need to store tmpobj into bobj
+		if ( writtenTo ) {
+			bobj[ current ] = tmpobj;
+			tmpobj = {};
+			writtenTo = false;
+		}
+		current = tmptime - ( tmptime % cli.intv );
+	}
 	// don't like using try/catch to grab parsing errors
 	try {
+		// grab URL query parameters
 		hdata = url.parse( req.url, true ).query;
+		// set interval time if timestamp was sent
+		if ( hdata.t ) htime = hdata.t - ( hdata.t % cli.intv );
+		// no timestamp was sent so use current interval
+		else htime = current;
+		// split aggregates into individual entries
+		hdata = hdata.d.split( ',' );
 	} catch( e ) {
 		if ( cli.debug ) {
 			debugLog( 'hdata Parse Error: ' + e );
 		}
 		return;
 	}
-	// get time from broadcast if exists
-	htime = hdata.t || Date.now();
-	//set htime for given time interval
-	htime -= htime % cli.intv;
-	// split aggregates into individual entries
-	hdata = hdata.d.split( ',' );
-	// ensure htime exists in bobj
-	if ( !bobj[ htime ] ) bobj[ htime ] = {};
-	// write each entry to interval's bobj entry
-	for ( hi = 0; hi < hdata.length; hi++ ) {
-		if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
-		bobj[ htime ][ hdata[ hi ]]++;
+	// write to tmpobj if full interval hasn't passed
+	if ( htime + cli.intv > current ) {
+		if ( hdata.length > 1 && !writtenTo ) {
+			writtenTo = true;
+		}
+		for ( hi = 0; hi < hdata.length; hi++ ) {
+			if ( !tmpobj[ hdata[ hi ]] ) tmpobj[ hdata[ hi ]] = 0;
+			tmpobj[ hdata[ hi ]]++;
+		}
+	} else {
+		// backfill data based on passed timestamp
+		// ensure htime exists in bobj
+		if ( !bobj[ htime ] ) bobj[ htime ] = {};
+		// write each entry to interval's bobj entry
+		for ( hi = 0; hi < hdata.length; hi++ ) {
+			if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
+			bobj[ htime ][ hdata[ hi ]]++;
+		}
 	}
 }).listen( cli.port );
