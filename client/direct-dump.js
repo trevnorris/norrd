@@ -29,7 +29,7 @@ function handler( req, res ) {
 
 netClient.on( 'data', function( data ) {
 	tmp = data.toString();
-	if ( tmp.charCodeAt( tmp.length - 1 ) !== 0 ) {
+	if ( tmp.charCodeAt( tmp.length - 1 ) !== 10 ) {
 		partData += tmp;
 		return;
 	}
