@@ -92,7 +92,7 @@ http.createServer(function( req, res ) {
 	}
 	// write to tmpobj if full interval hasn't passed
 	if ( htime + cli.intv > current ) {
-		if ( hdata.length > 1 && !writtenTo ) {
+		if ( hdata.length >= 1 && !writtenTo ) {
 			writtenTo = true;
 		}
 		for ( hi = 0; hi < hdata.length; hi++ ) {
