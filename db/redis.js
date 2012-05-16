@@ -8,7 +8,8 @@ require( '../utils' );
 
 cli.option( '-d, --debug', 'Enable debugging' )
 	.option( '-e, --expire', 'Hash expire time in sec. Set to zero for indefinite.', Number, 21600 )
-	.option( '-h, --host [host]', 'Host of redis instance', 'localhost' )
+	.option( '-f, --flip', 'Set to store data by id (default stores data by timestamp' )
+	.option( '-o, --host [host]', 'Host of redis instance', 'localhost' )
 	.option( '-p, --port [port]', 'Port number of redis instance', 6379 )
 	.option( '-s, --sock [socket]', 'Location of socket file where collector is broadcasting', '/tmp/norrd-collector.sock' )
 	.parse( process.argv );
@@ -47,7 +48,18 @@ conn.on( 'data', function( data ) {
 	} else {
 		tmpDoc += data.substr( 0, data.length - 1 );
 	}
-	bobj = JSON.parse( tmpDoc );
+	if ( cli.flip ) {
+		tmpDoc = JSON.parse( tmpDoc );
+		bobj = {};
+		for ( var i in tmpDoc ) {
+			for ( var j in tmpDoc[i] ) {
+				if ( !bobj[j] ) bobj[j] = {};
+				bobj[j][i] = tmpDoc[i][j];
+			}
+		}
+	} else {
+		bobj = JSON.parse( tmpDoc );
+	}
 	tmpDoc = '';
 	sendData();
 });
