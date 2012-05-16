@@ -4,18 +4,9 @@
 	<meta charset="UTF-8">
 	<title></title>
 	<style>
-	.x.axis line {
-		shape-rendering: auto;
-	}
-	.line {
-		fill: none;
-		stroke: #000;
-		stroke-width: 1.5px;
-	}
-	.axis path, .axis line {
-		fill: none;
-		stroke: #000;
-		shape-rendering: crispEdges;
+	.chart rect {
+		fill : steelblue;
+		stroke : white;
 	}
 	</style>
 </head>
@@ -24,17 +15,15 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>(function() {
 
+// prepare for receiving data from server
 var params = {};
-var longest = 300;
+var longest = 60;
+var graphParam = 'fx';
 var socket = io.connect( 'http://localhost' );
 socket.on( 'feed', function( feed ) {
-/* debug:start */
-console.log( feed );
-/* debug:stop */
 	// parse JSON string
 	try { feed = JSON.parse( feed ); }
 	catch( e ) { throw Error( e ); }
-
 	// transform feed for d3
 	for ( var i in feed ) {
 		for ( var j in feed[i] ) {
@@ -43,17 +32,86 @@ console.log( feed );
 		}
 	}
 	// make sure params doesn't get too long
-	//for ( i in params ) {
-	//	if ( params[i].length > longest )
-	//		params[i].splice( 0, params[i].length - longest );
-	//}
+	for ( i in params ) {
+		if ( params[i].length > longest )
+			params[i].splice( 0, params[i].length - longest );
+	}
+	// trigger regraph of data
+	redraw();
 });
+
+
+// initialize graphing of data
+var w = 5,
+	h = 80;
+
+var x = d3.scale.linear()
+	.domain([ 0, 1 ])
+	.range([ 0, w ]);
+
+var y = d3.scale.linear()
+	.domain([ 0, 100 ])
+	.rangeRound([ 0, h ]);
+
+
+var chart = d3.select( 'body' ).append( 'svg' )
+	.attr( 'class', 'chart' )
+	.attr( 'width', w * longest )
+	.attr( 'height', h );
+
+chart.append( 'line' )
+	.attr( 'x1', 0 )
+	.attr( 'x2', w * longest )
+	.attr( 'y1', h - .5 )
+	.attr( 'y2', h - .5 )
+	.style( 'stroke', '#000' );
+
+
+// function for regraph of data
+function redraw() {
+	// if specified parameter doesn't exist, just return
+	if ( !params[ graphParam ]) return;
+
+	// set the domain to the highest value in the data set
+	//y.domain( d3.extent( params[ graphParam ], function( d ) { return d.value; }));
+	y.domain([ 0, d3.max( params[ graphParam ], function( d ) { return d.value; })]);
+
+	// redraw the graphic with new data
+	var rect = chart.selectAll( 'rect' )
+		.data( params[ graphParam ], function( d ) { return d.time; });
+
+	rect.enter().append( 'rect', 'line' )
+		.attr( 'x', function( d, i ) { return x( i + 1 ) - 1; })
+		.attr( 'y', function( d ) { return h - y( d.value ) - 1; })
+		.attr( 'width', w )
+		.attr( 'height', function( d ) { return y( d.value ); })
+	.transition()
+		.duration( 100 )
+		.attr( 'x', function( d, i ) { return x( i ) - 1 })
+		.attr( 'y', function( d ) { return h - y( d.value ) - 1 })
+		.attr( 'height', function( d ) { return y( d.value )});
+
+	rect.transition()
+		.duration( 100 )
+		.attr( 'x', function( d, i ) { return x( i ) - 1 })
+		.attr( 'y', function( d ) { return h - y( d.value ) - 1 })
+		.attr( 'height', function( d ) { return y( d.value ); });
+
+	rect.exit()
+		.remove();
+	//rect.exit().transition()
+	//	.duration( 100 )
+	//	.attr( 'x', function( d, i ) { return x( i - 1 ) - .5; })
+	//	.remove();
+}
+
+
 
 /* debug:start */
 window.params = params;
 /* debug:stop */
 
 }())</script>
-	<pre id="sent-data"></pre>
+	<!--<pre id="sent-data"></pre>-->
 </body>
 </html>
