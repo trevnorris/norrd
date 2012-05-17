@@ -14,6 +14,7 @@ var http = require( 'http' ),
 	sList = {},        // list of receiver socket connections
 	sPath = [],        // path of socket files that are currently active
 	bobj = {},         // aggregated object that will be broadcast at interval
+	flip = {},         // if data is flipped, store here
 	stringified = '',  // bobj is first stringified and stored before broadcast
 	isAgg = false,     // don't read in new sockets when aggregating data
 	tmpStore = {},     // each receiver has a uid where data is stores, in case of large JSON
@@ -24,6 +25,7 @@ require( './utils' );
 
 cli.option( '-c, --config [loc]', 'Location of config.json', String, './config.json' )
 	.option( '-d, --debug', 'Enable debugging' )
+	.option( '-f, --flip', 'Flip data and broadcast by id, instead of by timestamp' )
 	.option( '-m, --multi', 'Set if this is a collection of collectors' )
 	.option( '-p, --port [port]', 'Port or path to broadcast aggregated data' )
 	.option( '-r, --rescan [numb]', 'If connection to receiver fails, time interval to attempt reconnect', Number )
@@ -37,6 +39,7 @@ config = JSON.parse( fs.readFileSync( cli.config, 'utf8' )).collector;
 
 // command line parameters will override config.json
 if ( cli.debug ) config.debug = cli.debug;
+if ( cli.flip ) config.flip = cli.flip;
 if ( cli.multi ) config.multi = cli.multi;
 if ( cli.port ) config.port = cli.port;
 if ( cli.rescan ) config.rescan = cli.rescan;
@@ -59,11 +62,25 @@ function objExtend( data ) {
 
 // emit data to all listed connections
 function emitter() {
+	var i, j;
+	// check if going to flip data
+	if ( config.flip ) {
+		flip = bobj;
+		bobj = {};
+		for ( i in flip ) {
+			for ( j in flip[i] ) {
+				if ( !bobj[j] ) bobj[j] = {};
+				bobj[j][i] = flip[i][j];
+			}
+		}
+		for ( i in flip )
+			delete flip[i];
+	}
 	// store stringified data
 	// append new line character so can determine end of JSON object
 	stringified = JSON.stringify( bobj ) + '\n';
 	// emit data on every socket connection in eList
-	for ( var i in eList )
+	for ( i in eList )
 		eList[i].write( stringified );
 	// cleanup
 	stringified = '';

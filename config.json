@@ -1,5 +1,6 @@
 {
 	"collector" : {
+		"flip" : true,
 		"multi" : false,
 		"port" : 7331,
 		"receivers" : [{
