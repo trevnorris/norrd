@@ -78,35 +78,53 @@ http.createServer(function( req, res ) {
 	try {
 		// grab URL query parameters
 		hdata = url.parse( req.url, true ).query;
-		// set interval time if timestamp was sent
-		if ( hdata.t ) htime = hdata.t - ( hdata.t % cli.intv );
-		// no timestamp was sent so use current interval
-		else htime = current;
 		// split aggregates into individual entries
-		hdata = hdata.d.split( ',' );
+		hdata.d = hdata.d.split( ',' );
 	} catch( e ) {
 		if ( cli.debug ) {
 			debugLog( 'hdata Parse Error: ' + e );
 		}
 		return;
 	}
+	// set interval time if timestamp was sent
+	if ( hdata.t ) htime = hdata.t - ( hdata.t % cli.intv );
+	// no timestamp was sent so use current interval
+	else htime = current;
+	// cleanup for looping later
+	delete hdata.t;
 	// write to tmpobj if full interval hasn't passed
 	if ( htime + cli.intv > current ) {
-		if ( hdata.length >= 1 && !writtenTo ) {
+		if ( hdata.d.length >= 1 && !writtenTo ) {
 			writtenTo = true;
 		}
-		for ( hi = 0; hi < hdata.length; hi++ ) {
-			if ( !tmpobj[ hdata[ hi ]] ) tmpobj[ hdata[ hi ]] = 0;
-			tmpobj[ hdata[ hi ]]++;
+		for ( hi = 0; hi < hdata.d.length; hi++ ) {
+			if ( !tmpobj[ hdata.d[ hi ]] ) tmpobj[ hdata.d[ hi ]] = 0;
+			tmpobj[ hdata.d[ hi ]]++;
+		}
+		// cleanup d data
+		delete hdata.d;
+		// loop through remaining values in hdata
+		for ( hi in hdata ) {
+			if ( !tmpobj[ hi ]) tmpobj[ hi ] = 0;
+			// cast hdata as Number
+			tmpobj[ hi ] += +hdata[ hi ];
 		}
 	} else {
 		// backfill data based on passed timestamp
 		// ensure htime exists in bobj
 		if ( !bobj[ htime ] ) bobj[ htime ] = {};
 		// write each entry to interval's bobj entry
-		for ( hi = 0; hi < hdata.length; hi++ ) {
-			if ( !bobj[ htime ][ hdata[ hi ]]) bobj[ htime ][ hdata[ hi ]] = 0;
-			bobj[ htime ][ hdata[ hi ]]++;
+		for ( hi = 0; hi < hdata.d.length; hi++ ) {
+			if ( !bobj[ htime ][ hdata.d[ hi ]]) bobj[ htime ][ hdata.d[ hi ]] = 0;
+			bobj[ htime ][ hdata.d[ hi ]]++;
+		}
+		// cleanup d data
+		delete hdata.d;
+		// loop through remaining values in hdata
+		for ( hi in hdata ) {
+			if ( !bobj[ htime ][ hi ]) bobj[ htime ][ hi ] = 0;
+			// cast hdata as Number
+			bobj[ htime ][ hi ] += +hdata[ hi ];
 		}
 	}
 }).listen( cli.port );
