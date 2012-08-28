@@ -4,17 +4,17 @@
 		"multi" : false,
 		"port" : 7331,
 		"receivers" : [{
-				"sock" : "sockets/receiver1.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver1.sock"
 			},{
-				"sock" : "sockets/receiver2.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver2.sock"
 			},{
-				"sock" : "sockets/receiver3.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver3.sock"
 			},{
-				"sock" : "sockets/receiver4.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver4.sock"
 			},{
-				"sock" : "sockets/receiver5.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver5.sock"
 			},{
-				"sock" : "sockets/receiver6.sock"
+				"sock" : "/tmp/norrd-receiver-out/receiver6.sock"
 		}],
 		"rescan" : 30000,
 		"time" : 1000

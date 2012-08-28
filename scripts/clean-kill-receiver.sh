@@ -1,5 +1,5 @@
 #!/bin/bash
 
 killall node
-rm sockets/*.sock
-rm /tmp/socket-test/*
+rm /tmp/norrd-receiver-out/*.sock
+rm /tmp/norrd-receiver-in/*
