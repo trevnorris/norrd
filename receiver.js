@@ -12,107 +12,107 @@
  */
 
 
-var http = require( 'http' ),
-	url = require( 'url' ),
-	net = require( 'net' ),
-	cli = require( 'commander' ),
+var http = require('http'),
+	url = require('url'),
+	net = require('net'),
+	cli = require('commander'),
 	bobj = {},
 	tmpobj = {},
 	current = 0,
 	writtenTo = false,
 	tmptime, tmpref, ci, hdata, htime, hi;
 
-require( './utils' );
+require('./utils');
 
-cli.option( '-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock' )
-	.option( '-p, --port [port]', 'Port or path for http server to run on', 7331 )
-	.option( '-i, --intv [numb]', 'Time interval for data aggregation', Number, 1000 )
-	.option( '-d, --debug', 'Enable debugging' )
-	.parse( process.argv );
+cli.option('-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock')
+	.option('-p, --port [port]', 'Port or path for http server to run on', 7331)
+	.option('-i, --intv [numb]', 'Time interval for data aggregation', Number, 1000)
+	.option('-d, --debug', 'Enable debugging')
+	.parse(process.argv);
 
 
 // broadcast JSON as string through specified parameter
-net.createServer(function( socket ) {
-	if ( cli.debug ) {
-		debugLog( 'server connected' );
-		socket.on( 'end', function() {
-			debugLog( 'server disconnected' );
+net.createServer(function(socket) {
+	if (cli.debug) {
+		debugLog('server connected');
+		socket.on('end', function() {
+			debugLog('server disconnected');
 		});
 	}
-	socket.on( 'data', function() {
+	socket.on('data', function() {
 		tmptime = Date.now();
 		// check if need to transfer data from tmpobj to bobj
-		if ( current + cli.intv < tmptime ) {
-			if ( writtenTo ) {
+		if (current + cli.intv < tmptime) {
+			if (writtenTo) {
 				bobj[ current ] = tmpobj;
 				tmpobj = {};
 				writtenTo = false;
 			}
-			current = tmptime - ( tmptime % cli.intv );
+			current = tmptime - (tmptime % cli.intv);
 		}
 		// send JSON and append null so can indentify end of feed
-		socket.write( JSON.stringify( bobj ) + '\n' );
+		socket.write(JSON.stringify(bobj) + '\n');
 		// clear all items in broadcast object
-		for ( ci in bobj )
+		for (ci in bobj)
 			delete bobj[ci];
 	});
-}).listen( cli.file );
+}).listen(cli.file);
 
 
 // create http server to listen for hits
-http.createServer(function( req, res ) {
-	res.writeHead( 202, { 'Connection' : 'close' });
+http.createServer(function(req, res) {
+	res.writeHead(202, { 'Connection' : 'close' });
 	res.end();
 	tmptime = Date.now();
 	// check if current interval should be incremented
-	if ( current + cli.intv < tmptime ) {
+	if (current + cli.intv < tmptime) {
 		// yes, so need to store tmpobj into bobj
-		if ( writtenTo ) {
+		if (writtenTo) {
 			bobj[ current ] = tmpobj;
 			tmpobj = {};
 			writtenTo = false;
 		}
-		current = tmptime - ( tmptime % cli.intv );
+		current = tmptime - (tmptime % cli.intv);
 	}
 	// don't like using try/catch to grab parsing errors
 	try {
 		// grab URL query parameters
-		hdata = url.parse( req.url, true ).query;
+		hdata = url.parse(req.url, true).query;
 		// split aggregates into individual entries
-		hdata.d = hdata.d.split( ',' );
-	} catch( e ) {
-		if ( cli.debug ) {
-			debugLog( 'hdata Parse Error: ' + e );
+		hdata.d = hdata.d.split(',');
+	} catch(e) {
+		if (cli.debug) {
+			debugLog('hdata Parse Error: ' + e);
 		}
 		return;
 	}
 	// set interval time if timestamp was sent
-	if ( hdata.t ) htime = hdata.t - ( hdata.t % cli.intv );
+	if (hdata.t) htime = hdata.t - (hdata.t % cli.intv);
 	// no timestamp was sent so use current interval
 	else htime = current;
 	// cleanup for looping later
 	delete hdata.t;
 	// set tmpref to tmpobj if full interval hasn't passed
-	if ( htime + cli.intv > current ) {
-		if ( hdata.d.length >= 1 && !writtenTo ) {
+	if (htime + cli.intv > current) {
+		if (hdata.d.length >= 1 && !writtenTo) {
 			writtenTo = true;
 		}
 		tmpref = tmpobj;
 	} else {
 		// backfill data based on passed timestamp
-		if ( !bobj[ htime ]) bobj[ htime ] = {};
+		if (!bobj[ htime ]) bobj[ htime ] = {};
 		tmpref = bobj[ htime ];
 	}
-	for ( hi = 0; hi < hdata.d.length; hi++ ) {
-		if ( !tmpref[ hdata.d[ hi ]]) tmpref[ hdata.d[ hi ]] = 0;
+	for (hi = 0; hi < hdata.d.length; hi++) {
+		if (!tmpref[ hdata.d[ hi ]]) tmpref[ hdata.d[ hi ]] = 0;
 		tmpref[ hdata.d[ hi ]]++;
 	}
 	// cleanup d data
 	delete hdata.d;
 	// loop through remaining values in hdata
-	for ( hi in hdata ) {
-		if ( !tmpref[ hi ]) tmpref[ hi ] = 0;
+	for (hi in hdata) {
+		if (!tmpref[ hi ]) tmpref[ hi ] = 0;
 		// cast hdata as Number
 		tmpref[ hi ] += +hdata[ hi ];
 	}
-}).listen( cli.port );
+}).listen(cli.port);
