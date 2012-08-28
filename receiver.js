@@ -27,7 +27,7 @@ require('./utils');
 // set umask for socket files
 process.umask(0);
 
-cli.option('-f, --file [file]', 'Location to write the socket file', 'sockets/receiver.sock')
+cli.option('-f, --file [file]', 'Location to write the socket file', '/tmp/norrd-receiver-out/receiver.sock')
 	.option('-p, --port [port]', 'Port or path for http server to run on', 7331)
 	.option('-i, --intv [numb]', 'Time interval for data aggregation', Number, 1000)
 	.option('-d, --debug', 'Enable debugging')

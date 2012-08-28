@@ -23,7 +23,7 @@ var http = require( 'http' ),
 
 require( './utils' );
 
-cli.option( '-c, --config [loc]', 'Location of config.json', String, './config.json' )
+cli.option( '-c, --config [loc]', 'Location of config.json', String, __dirname + '/config.json' )
 	.option( '-d, --debug', 'Enable debugging' )
 	.option( '-f, --flip', 'Flip data and broadcast by id, instead of by timestamp' )
 	.option( '-m, --multi', 'Set if this is a collection of collectors' )
