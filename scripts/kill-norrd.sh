@@ -1,5 +1,6 @@
 #!/bin/bash
 
-killall node
-rm /tmp/norrd-receiver-out/*
-rm /tmp/norrd-receiver-in/*
+killall -q node
+rm -f /tmp/norrd-receiver-out/*
+rm -f /tmp/norrd-receiver-in/*
+rm -f /tmp/norrd*.sock
