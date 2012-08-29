@@ -3,7 +3,7 @@
  * This will aggregate those items by a set time interval then broadcast
  * the results to a socket file that will be read by a collector.
  * The URL parameters should look like the following:
- * http://mysite.com?d=val1,val2,val3,val4
+ * http://mysite.com?_=val1,val2,val3,val4
  *
  * --port option can also be given a path to a socket file. So this
  * can be load balanced behind nginx or the like.
@@ -16,10 +16,10 @@ var http = require('http'),
 	url = require('url'),
 	net = require('net'),
 	cli = require('commander'),
-	bobj = {},
-	tmpobj = {},
-	current = 0,
-	writtenTo = false,
+	bobj = {},          // base object serialized and sent out after aggregation
+	tmpobj = {},        // tmp store data to ensure proper data backfill
+	current = 0,        // store current epoch to check if data needs to be backfilled
+	writtenTo = false,  // think used to check if values have been written to tmpobj
 	tmptime, tmpref, ci, hdata, htime, hi;
 
 require('./utils');
@@ -27,6 +27,7 @@ require('./utils');
 // set umask for socket files
 process.umask(0);
 
+// parse command line options
 cli.option('-f, --file [file]', 'Location to write the socket file', '/tmp/norrd-receiver-out/receiver.sock')
 	.option('-p, --port [port]', 'Port or path for http server to run on', 7331)
 	.option('-i, --intv [numb]', 'Time interval for data aggregation', Number, 1000)
@@ -82,7 +83,7 @@ http.createServer(function(req, res) {
 		// grab URL query parameters
 		hdata = url.parse(req.url, true).query;
 		// split aggregates into individual entries
-		hdata.d = hdata.d.split(',');
+		hdata._ = hdata._.split(',');
 	} catch(e) {
 		if (cli.debug) {
 			debugLog('hdata Parse Error: ' + e);
@@ -97,7 +98,7 @@ http.createServer(function(req, res) {
 	delete hdata.t;
 	// set tmpref to tmpobj if full interval hasn't passed
 	if (htime + cli.intv > current) {
-		if (hdata.d.length >= 1 && !writtenTo) {
+		if (hdata._.length >= 1 && !writtenTo) {
 			writtenTo = true;
 		}
 		tmpref = tmpobj;
@@ -106,12 +107,12 @@ http.createServer(function(req, res) {
 		if (!bobj[ htime ]) bobj[ htime ] = {};
 		tmpref = bobj[ htime ];
 	}
-	for (hi = 0; hi < hdata.d.length; hi++) {
-		if (!tmpref[ hdata.d[ hi ]]) tmpref[ hdata.d[ hi ]] = 0;
-		tmpref[ hdata.d[ hi ]]++;
+	for (hi = 0; hi < hdata._.length; hi++) {
+		if (!tmpref[ hdata._[ hi ]]) tmpref[ hdata._[ hi ]] = 0;
+		tmpref[ hdata._[ hi ]]++;
 	}
 	// cleanup d data
-	delete hdata.d;
+	delete hdata._;
 	// loop through remaining values in hdata
 	for (hi in hdata) {
 		if (!tmpref[ hi ]) tmpref[ hi ] = 0;

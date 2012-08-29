@@ -1,8 +1,6 @@
 {
 	"collector" : {
-		"flip" : true,
-		"multi" : false,
-		"port" : 7331,
+		"port" : "/tmp/norrd-collector.sock",
 		"receivers" : [{
 				"sock" : "/tmp/norrd-receiver-out/receiver1.sock"
 			},{
